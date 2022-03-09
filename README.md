@@ -1,4 +1,5 @@
 # go-flux
+[![GoDoc](https://godoc.org/github.com/xescugc/go-flux?status.svg)](https://godoc.org/github.com/xescugc/go-flux)
 
 GO implementation/port of the [Flux](https://github.com/facebook/flux) application architecture
 
