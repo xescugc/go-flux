@@ -68,6 +68,8 @@ type dispatcher struct {
 	// pendingPayload is the general payload sent
 	pendingPayload interface{}
 
+	lastID int
+
 	dispatching bool
 }
 
@@ -84,7 +86,8 @@ func (d *dispatcher) Register(fn CallbackFn) string {
 	d.muCallbacks.Lock()
 	defer d.muCallbacks.Unlock()
 
-	id := strconv.Itoa(len(d.callbacks) + 1)
+	d.lastID++
+	id := strconv.Itoa(d.lastID)
 	d.callbacks[id] = fn
 	return id
 }

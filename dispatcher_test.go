@@ -1,6 +1,7 @@
 package flux_test
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,39 +10,67 @@ import (
 )
 
 func TestDispatcher(t *testing.T) {
-	d := flux.NewDispatcher()
-	var fnCalled bool
-	pl := "some action"
+	t.Run("Success", func(t *testing.T) {
+		d := flux.NewDispatcher()
+		var fnCalled bool
+		pl := "some action"
 
-	id := d.Register(func(payload interface{}) {
-		fnCalled = true
-		assert.Equal(t, pl, payload)
-		assert.True(t, d.IsDispatching())
+		id := d.Register(func(payload interface{}) {
+			fnCalled = true
+			assert.Equal(t, pl, payload)
+			assert.True(t, d.IsDispatching())
 
-		err := d.Dispatch(payload)
-		assert.EqualError(t, err, flux.ErrAlreadyDispatching.Error())
+			err := d.Dispatch(payload)
+			assert.EqualError(t, err, flux.ErrAlreadyDispatching.Error())
+		})
+
+		assert.Equal(t, "1", id)
+		assert.False(t, fnCalled)
+		assert.False(t, d.IsDispatching())
+
+		err := d.Dispatch(pl)
+		require.NoError(t, err)
+
+		assert.True(t, fnCalled)
+		assert.False(t, d.IsDispatching())
+
+		err = d.Unregister(id)
+		require.NoError(t, err)
+
+		err = d.Unregister(id)
+		assert.EqualError(t, err, flux.ErrNotMatchingCallback.Error())
+
+		fnCalled = false
+
+		d.Dispatch(pl)
+		assert.False(t, fnCalled)
 	})
 
-	assert.Equal(t, "1", id)
-	assert.False(t, fnCalled)
-	assert.False(t, d.IsDispatching())
+	t.Run("RegisteringAndUnregisteringMultipleFunctions", func(t *testing.T) {
+		calls := make([]int, 0, 0)
+		cbFn := func(n int) flux.CallbackFn {
+			return func(payload interface{}) {
+				calls = append(calls, n)
+			}
+		}
 
-	err := d.Dispatch(pl)
-	require.NoError(t, err)
+		d := flux.NewDispatcher()
+		d.Register(cbFn(1))
+		id2 := d.Register(cbFn(2))
+		d.Register(cbFn(3))
+		d.Dispatch("")
+		sort.Ints(calls)
 
-	assert.True(t, fnCalled)
-	assert.False(t, d.IsDispatching())
+		assert.Equal(t, []int{1, 2, 3}, calls)
+		calls = make([]int, 0, 0)
 
-	err = d.Unregister(id)
-	require.NoError(t, err)
+		d.Unregister(id2)
+		d.Register(cbFn(4))
+		d.Dispatch("")
+		sort.Ints(calls)
 
-	err = d.Unregister(id)
-	assert.EqualError(t, err, flux.ErrNotMatchingCallback.Error())
-
-	fnCalled = false
-
-	d.Dispatch(pl)
-	assert.False(t, fnCalled)
+		assert.Equal(t, []int{1, 3, 4}, calls)
+	})
 }
 
 func TestWaitFor(t *testing.T) {
