@@ -44,3 +44,40 @@ ciStore.DispatcherToken = d.Register(func(payload interface{}){
 })
 ```
 
+## Store
+
+Store is an abstraction around a Dispatcher which adds listener functionalities to it
+
+### Examples
+
+```golang
+type MyStore struct {
+  flux.Store
+}
+
+func NewMyStore(d Dispatcher) &MyStore {
+  ms := &MyStore{}
+  s := flux.NewStore(d, ms.OnDispatch)
+  ms.Store = s
+
+  return s
+}
+
+// OnDispatch will be called each time the Dispatcher dispatches
+// a new action
+func (m *MyStore) OnDispatch(payload interface{}) {
+  // Do any actions with the payload
+
+  // If I want to notify all the listeners that something has
+  // changed I have to use the Store.EmitChange
+  m.Storte.EmitChange()
+}
+
+d := flux.NewDispatcher()
+ms := NewMyStore(d)
+rl := ms.AddListener(func() {
+  // Will be called when the Store
+  // has any new change
+})
+
+```
