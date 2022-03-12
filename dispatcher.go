@@ -18,40 +18,7 @@ var (
 type CallbackFn func(payload interface{})
 
 // Dispatcher is used to broadcast payloads to registered callbacks.
-type Dispatcher interface {
-	// Register register the cbFn so it will be
-	// executed when Dispatch is executed
-	// The returned ID is the internal ID of that function and can be
-	// used to WaitFor or Unregister a fn
-	Register(cbFn CallbackFn) string
-
-	// Unregister removes the internal cbFn that has
-	// assigned id. If the id is not registered
-	// it'll return ErrNotMatchingCallback
-	Unregister(id string) error
-
-	// WaitFor will wait for all the ids on the list to be
-	// executed before running the callback it belongs to.
-	// If one of the ids is not registered a ErrNotMatchingCallback
-	// will be returned
-	// If there is a circular dependency an ErrNotMatchingCallback
-	// will be returned
-	// If it's called while not Dispatching an ErrWaitForDispatching
-	// will be returned
-	WaitFor(ids ...string) error
-
-	// Dispatch will send the payload to all the Registered
-	// callbacks.
-	// If we are already dispatching an ErrAlreadyDispatching
-	// will be returned
-	Dispatch(payload interface{}) error
-
-	// IsDispatching checks if the Dispatcher is doing any work
-	IsDispatching() bool
-}
-
-// dispatcher is the  internal implementation of the Dispatcher interface
-type dispatcher struct {
+type Dispatcher struct {
 	muCallbacks sync.RWMutex
 	// callbacks is a list of all
 	// the callbacks registered
@@ -74,15 +41,19 @@ type dispatcher struct {
 }
 
 // NewDispatcher returns a new Dispatcher implementation
-func NewDispatcher() Dispatcher {
-	return &dispatcher{
+func NewDispatcher() *Dispatcher {
+	return &Dispatcher{
 		callbacks: make(map[string]CallbackFn),
 		isHandled: make(map[string]struct{}),
 		isPending: make(map[string]struct{}),
 	}
 }
 
-func (d *dispatcher) Register(fn CallbackFn) string {
+// Register register the cbFn so it will be
+// executed when Dispatch is executed
+// The returned ID is the internal ID of that function and can be
+// used to WaitFor or Unregister a fn
+func (d *Dispatcher) Register(fn CallbackFn) string {
 	d.muCallbacks.Lock()
 	defer d.muCallbacks.Unlock()
 
@@ -92,7 +63,10 @@ func (d *dispatcher) Register(fn CallbackFn) string {
 	return id
 }
 
-func (d *dispatcher) Unregister(id string) error {
+// Unregister removes the internal cbFn that has
+// assigned id. If the id is not registered
+// it'll return ErrNotMatchingCallback
+func (d *Dispatcher) Unregister(id string) error {
 	d.muCallbacks.Lock()
 	defer d.muCallbacks.Unlock()
 
@@ -105,7 +79,15 @@ func (d *dispatcher) Unregister(id string) error {
 	return nil
 }
 
-func (d *dispatcher) WaitFor(ids ...string) error {
+// WaitFor will wait for all the ids on the list to be
+// executed before running the callback it belongs to.
+// If one of the ids is not registered a ErrNotMatchingCallback
+// will be returned
+// If there is a circular dependency an ErrNotMatchingCallback
+// will be returned
+// If it's called while not Dispatching an ErrWaitForDispatching
+// will be returned
+func (d *Dispatcher) WaitFor(ids ...string) error {
 	if !d.dispatching {
 		return ErrWaitForDispatching
 	}
@@ -126,7 +108,11 @@ func (d *dispatcher) WaitFor(ids ...string) error {
 	return nil
 }
 
-func (d *dispatcher) Dispatch(payload interface{}) error {
+// Dispatch will send the payload to all the Registered
+// callbacks.
+// If we are already dispatching an ErrAlreadyDispatching
+// will be returned
+func (d *Dispatcher) Dispatch(payload interface{}) error {
 	d.muCallbacks.RLock()
 	defer d.muCallbacks.RUnlock()
 
@@ -147,22 +133,23 @@ func (d *dispatcher) Dispatch(payload interface{}) error {
 	return nil
 }
 
-func (d *dispatcher) IsDispatching() bool { return d.dispatching }
+// IsDispatching checks if the Dispatcher is doing any work
+func (d *Dispatcher) IsDispatching() bool { return d.dispatching }
 
-func (d *dispatcher) invokeCallback(id string) {
+func (d *Dispatcher) invokeCallback(id string) {
 	d.isPending[id] = struct{}{}
 	d.callbacks[id](d.pendingPayload)
 	d.isHandled[id] = struct{}{}
 }
 
-func (d *dispatcher) startDispatching(payload interface{}) {
+func (d *Dispatcher) startDispatching(payload interface{}) {
 	d.dispatching = true
 	d.isHandled = make(map[string]struct{})
 	d.isPending = make(map[string]struct{})
 	d.pendingPayload = payload
 }
 
-func (d *dispatcher) stopDispatching() {
+func (d *Dispatcher) stopDispatching() {
 	d.dispatching = false
 	d.pendingPayload = nil
 }
