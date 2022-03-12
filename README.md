@@ -52,15 +52,15 @@ Store is an abstraction around a Dispatcher which adds listener functionalities 
 
 ```golang
 type MyStore struct {
-  flux.Store
+  *flux.Store
 }
 
-func NewMyStore(d Dispatcher) &MyStore {
+func NewMyStore(d *Dispatcher) &MyStore {
   ms := &MyStore{}
   s := flux.NewStore(d, ms.OnDispatch)
   ms.Store = s
 
-  return s
+  return ms
 }
 
 // OnDispatch will be called each time the Dispatcher dispatches
@@ -80,4 +80,45 @@ rl := ms.AddListener(func() {
   // has any new change
 })
 
+```
+
+## ReduceStore
+
+Is the main struct to extend/compose any Store, it extends the Store and it has a State
+and that State is changed with a reducer and if in that reducer `reduce(state,action) state`
+the state has changed it'll automatically trigger a change envent, it's not longer necessary
+to manually trigger it.
+
+### Examples
+
+```golang
+type MyStore struct {
+  *flux.ReduceStore
+}
+
+type State struct {
+  Value int
+}
+
+func NewMyStore(d *Dispatcher) &MyStore {
+  ms := &MyStore{}
+  rs := flux.NewReduceStore(d, ms.Reduce, State{})
+  ms.ReduceStore = rs
+
+  return ms
+}
+
+// Reduce will be called each time the Dispatcher dispatches
+// a new action and if the staet is changed all the listeners
+// will be notified of the change
+func (m *MyStore) Reduce(state, payload interface{}) interface{}{
+  // Do any actions with the payload
+}
+
+d := flux.NewDispatcher()
+ms := NewMyStore(d)
+rl := ms.AddListener(func() {
+  // Will be called when the Store
+  // has any new change
+})
 ```
