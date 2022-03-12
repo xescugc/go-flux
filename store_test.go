@@ -12,7 +12,7 @@ func TestStore(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		cbFnInvoked := false
 		d := flux.NewDispatcher()
-		var s flux.Store
+		var s *flux.Store
 		cbFn := func(p interface{}) {
 			cbFnInvoked = true
 			err := s.EmitChange()
@@ -44,7 +44,7 @@ func TestStore(t *testing.T) {
 	t.Run("SuccessWithListeners", func(t *testing.T) {
 		cbFnInvoked := false
 		d := flux.NewDispatcher()
-		var s flux.Store
+		var s *flux.Store
 		cbFn := func(p interface{}) {
 			cbFnInvoked = true
 			err := s.EmitChange()
@@ -92,7 +92,7 @@ func TestStore(t *testing.T) {
 	t.Run("SuccessWithNoChanges", func(t *testing.T) {
 		cbFnInvoked := false
 		d := flux.NewDispatcher()
-		var s flux.Store
+		var s *flux.Store
 		cbFn := func(p interface{}) {
 			cbFnInvoked = true
 		}
