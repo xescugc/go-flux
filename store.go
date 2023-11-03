@@ -67,7 +67,7 @@ func (s *Store) GetDispatcher() *Dispatcher { return s.dispatcher }
 // to this store
 func (s *Store) GetDispatcherToken() string { return s.dispatcherToken }
 
-// HasChanged evaluates if the store has chnaged.
+// HasChanged evaluates if the store has changed.
 // It can only be called during a dispatch if not
 // it returns ErrRequiresDispatching
 func (s *Store) HasChanged() (bool, error) {

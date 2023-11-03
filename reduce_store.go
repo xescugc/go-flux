@@ -2,6 +2,8 @@ package flux
 
 import (
 	"reflect"
+
+	"github.com/barkimedes/go-deepcopy"
 )
 
 // ReduceFn is the function that would be used to handle dispatched
@@ -23,7 +25,7 @@ type ReduceStore struct {
 	areEqualFn ReduceAreEqualFn
 }
 
-// NewReduceStore will return a new ReduceStore with the given dispatcher that each dispatch wil cal the rFn.
+// NewReduceStore will return a new ReduceStore with the given dispatcher that each dispatch will cal the rFn.
 // The first state will be the initialState and the opts can overwrite some of the internal logic
 // If after the rFn the state has changed a change even will be triggered to the Listeners if any, the change does not
 // have to be set manually
@@ -43,8 +45,8 @@ func NewReduceStore(d *Dispatcher, rFn ReduceFn, initialState interface{}, opts 
 	return rs
 }
 
-// GetState returns the current state
-func (rs *ReduceStore) GetState() interface{} { return rs.state }
+// GetState returns a copy of the current state
+func (rs *ReduceStore) GetState() interface{} { return deepcopy.MustAnything(rs.state) }
 
 // AreEqual will compare the object one and two to check if they are equal or not.
 // It's used internally to check if the state has changed after the reduce

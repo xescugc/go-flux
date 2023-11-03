@@ -9,13 +9,34 @@ import (
 
 type testState struct {
 	Value int
+	Map   map[string]int
+}
+
+func TestReduceStore_GetState(t *testing.T) {
+	d := flux.NewDispatcher()
+	is := testState{Map: map[string]int{"test": 2}}
+
+	rFn := func(state, action interface{}) interface{} {
+		ts := state.(testState)
+		ts.Value = 1
+		return ts
+	}
+
+	rs := flux.NewReduceStore(d, rFn, is)
+
+	gs := rs.GetState().(testState)
+	assert.Equal(t, is.Map["test"], gs.Map["test"])
+	gs.Map["test"] = 10
+
+	gs = rs.GetState().(testState)
+	assert.Equal(t, 2, gs.Map["test"], "The GetState should return an copy of the state")
 }
 
 func TestReduceStore(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		d := flux.NewDispatcher()
-		is := testState{}
-		eis := testState{Value: 1}
+		is := testState{Map: make(map[string]int)}
+		eis := testState{Value: 1, Map: make(map[string]int)}
 		rFnInvoked := false
 
 		rFn := func(state, action interface{}) interface{} {
@@ -65,7 +86,7 @@ func TestReduceStore(t *testing.T) {
 	})
 	t.Run("OverwriteAreEqual", func(t *testing.T) {
 		d := flux.NewDispatcher()
-		is := testState{}
+		is := testState{Map: make(map[string]int)}
 		rFnInvoked := false
 
 		rFn := func(state, action interface{}) interface{} {
