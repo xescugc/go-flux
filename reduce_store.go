@@ -23,7 +23,7 @@ type ReduceStore struct {
 	areEqualFn ReduceAreEqualFn
 }
 
-// NewReduceStore will return a new ReduceStore with the given dispatcher that each dispatch wil cal the rFn.
+// NewReduceStore will return a new ReduceStore with the given dispatcher that each dispatch will cal the rFn.
 // The first state will be the initialState and the opts can overwrite some of the internal logic
 // If after the rFn the state has changed a change even will be triggered to the Listeners if any, the change does not
 // have to be set manually
@@ -44,6 +44,8 @@ func NewReduceStore(d *Dispatcher, rFn ReduceFn, initialState interface{}, opts 
 }
 
 // GetState returns the current state
+// BUG(xescugc) This is not a copy but the full state, this means that any changes will be
+// persisted and that this may cause concurrency issues from the caller.
 func (rs *ReduceStore) GetState() interface{} { return rs.state }
 
 // AreEqual will compare the object one and two to check if they are equal or not.

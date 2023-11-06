@@ -86,7 +86,7 @@ rl := ms.AddListener(func() {
 
 Is the main struct to extend/compose any Store, it extends the Store and it has a State
 and that State is changed with a reducer and if in that reducer `reduce(state,action) state`
-the state has changed it'll automatically trigger a change envent, it's not longer necessary
+the state has changed it'll automatically trigger a change event, it's not longer necessary
 to manually trigger it.
 
 ### Examples
