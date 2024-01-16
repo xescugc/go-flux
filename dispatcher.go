@@ -19,7 +19,7 @@ type CallbackFn func(payload interface{})
 
 // Dispatcher is used to broadcast payloads to registered callbacks.
 type Dispatcher struct {
-	muCallbacks sync.RWMutex
+	muCallbacks sync.Mutex
 	// callbacks is a list of all
 	// the callbacks registered
 	callbacks map[string]CallbackFn
@@ -113,12 +113,12 @@ func (d *Dispatcher) WaitFor(ids ...string) error {
 // If we are already dispatching an ErrAlreadyDispatching
 // will be returned
 func (d *Dispatcher) Dispatch(payload interface{}) error {
-	d.muCallbacks.RLock()
-	defer d.muCallbacks.RUnlock()
-
 	if d.dispatching {
 		return ErrAlreadyDispatching
 	}
+
+	d.muCallbacks.Lock()
+	defer d.muCallbacks.Unlock()
 
 	d.startDispatching(payload)
 	defer d.stopDispatching()
