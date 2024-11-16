@@ -20,8 +20,10 @@ func TestDispatcher(t *testing.T) {
 			assert.Equal(t, pl, payload)
 			assert.True(t, d.IsDispatching())
 
-			err := d.Dispatch(payload)
-			assert.EqualError(t, err, flux.ErrAlreadyDispatching.Error())
+			go func() {
+				err := d.Dispatch(payload)
+				require.NoError(t, err)
+			}()
 		})
 
 		assert.Equal(t, "1", id)

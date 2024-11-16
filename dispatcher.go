@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strconv"
 	"sync"
+	"sync/atomic"
 )
 
 // List of all the errors
@@ -37,7 +38,7 @@ type Dispatcher struct {
 
 	lastID int
 
-	dispatching bool
+	dispatching atomic.Bool
 }
 
 // NewDispatcher returns a new Dispatcher implementation
@@ -88,7 +89,7 @@ func (d *Dispatcher) Unregister(id string) error {
 // If it's called while not Dispatching an ErrWaitForDispatching
 // will be returned
 func (d *Dispatcher) WaitFor(ids ...string) error {
-	if !d.dispatching {
+	if !d.dispatching.Load() {
 		return ErrWaitForDispatching
 	}
 	for _, id := range ids {
@@ -110,13 +111,10 @@ func (d *Dispatcher) WaitFor(ids ...string) error {
 
 // Dispatch will send the payload to all the Registered
 // callbacks.
-// If we are already dispatching an ErrAlreadyDispatching
-// will be returned
+// If we are already dispatching you'll enter in a deadlock
+// situation, so if you want to dispatch from inside a dispatch
+// do it in a goroutine
 func (d *Dispatcher) Dispatch(payload interface{}) error {
-	if d.dispatching {
-		return ErrAlreadyDispatching
-	}
-
 	d.muCallbacks.Lock()
 	defer d.muCallbacks.Unlock()
 
@@ -134,7 +132,7 @@ func (d *Dispatcher) Dispatch(payload interface{}) error {
 }
 
 // IsDispatching checks if the Dispatcher is doing any work
-func (d *Dispatcher) IsDispatching() bool { return d.dispatching }
+func (d *Dispatcher) IsDispatching() bool { return d.dispatching.Load() }
 
 func (d *Dispatcher) invokeCallback(id string) {
 	d.isPending[id] = struct{}{}
@@ -143,13 +141,13 @@ func (d *Dispatcher) invokeCallback(id string) {
 }
 
 func (d *Dispatcher) startDispatching(payload interface{}) {
-	d.dispatching = true
+	d.dispatching.Store(true)
 	d.isHandled = make(map[string]struct{})
 	d.isPending = make(map[string]struct{})
 	d.pendingPayload = payload
 }
 
 func (d *Dispatcher) stopDispatching() {
-	d.dispatching = false
+	d.dispatching.Store(false)
 	d.pendingPayload = nil
 }
