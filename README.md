@@ -3,6 +3,9 @@
 
 GO implementation/port of the [Flux](https://github.com/facebook/flux) application architecture
 
+
+**Note:** `v2` uses Generics, for a no-generic approach you can check the `v1`
+
 ## Dispatcher
 
 Dispatcher is used to broadcast payloads to registered callbacks. This is different from generic pub-sub systems in two ways:
@@ -21,18 +24,27 @@ type CityStore struct {
   DispatcherToken string
 }
 
+type Payload struct {
+  Type string
+  // The same payload will carry different types
+  // with different attributes depending on the Type
+}
+
 // Initialize the Dispatcher
-d := flux.NewDispatcher()
+d := flux.NewDispatcher[Payload]()
 
 // Initialize the Stores
 coStore := CountryStore{}
 ciStore := CityStore{}
 
 // Register some callbacks to the Dispatcher
-coStore.DispatcherToken = d.Register(func(payload interface{}){
+coStore.DispatcherToken = d.Register(func(payload Payload){
   // Do any actions with the payload
+  switch payload.Type {
+    // Do actions depending on the Types
+  }
 })
-ciStore.DispatcherToken = d.Register(func(payload interface{}){
+ciStore.DispatcherToken = d.Register(func(payload Payload){
   // This will make sure that the
   // callback is executed after the IDs
   // on the WaitFor have already ran the callback 
@@ -41,6 +53,9 @@ ciStore.DispatcherToken = d.Register(func(payload interface{}){
 
   // Do any actions with the payload after
   // he coStore has already dealt with the action
+  switch payload.Type {
+    // Do actions depending on the Types
+  }
 })
 ```
 
@@ -51,6 +66,12 @@ Store is an abstraction around a Dispatcher which adds listener functionalities 
 ### Examples
 
 ```golang
+type Payload struct {
+  Type string
+  // The same payload will carry different types
+  // with different attributes depending on the Type
+}
+
 type MyStore struct {
   *flux.Store
 }
@@ -65,7 +86,7 @@ func NewMyStore(d *Dispatcher) &MyStore {
 
 // OnDispatch will be called each time the Dispatcher dispatches
 // a new action
-func (m *MyStore) OnDispatch(payload interface{}) {
+func (m *MyStore) OnDispatch(payload Payload) {
   // Do any actions with the payload
 
   // If I want to notify all the listeners that something has
@@ -73,7 +94,7 @@ func (m *MyStore) OnDispatch(payload interface{}) {
   m.Storte.EmitChange()
 }
 
-d := flux.NewDispatcher()
+d := flux.NewDispatcher[Payload]()
 ms := NewMyStore(d)
 rl := ms.AddListener(func() {
   // Will be called when the Store
@@ -92,6 +113,12 @@ to manually trigger it.
 ### Examples
 
 ```golang
+type Payload struct {
+  Type string
+  // The same payload will carry different types
+  // with different attributes depending on the Type
+}
+
 type MyStore struct {
   *flux.ReduceStore
 }
@@ -111,11 +138,11 @@ func NewMyStore(d *Dispatcher) &MyStore {
 // Reduce will be called each time the Dispatcher dispatches
 // a new action and if the staet is changed all the listeners
 // will be notified of the change
-func (m *MyStore) Reduce(state, payload interface{}) interface{}{
+func (m *MyStore) Reduce(state State, payload Payload) interface{}{
   // Do any actions with the payload
 }
 
-d := flux.NewDispatcher()
+d := flux.NewDispatcher[Payload]()
 ms := NewMyStore(d)
 rl := ms.AddListener(func() {
   // Will be called when the Store

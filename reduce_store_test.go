@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/xescugc/go-flux"
+	"github.com/xescugc/go-flux/v2"
 )
 
 type testState struct {
@@ -13,16 +13,15 @@ type testState struct {
 
 func TestReduceStore(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		d := flux.NewDispatcher()
+		d := flux.NewDispatcher[string]()
 		is := testState{}
 		eis := testState{Value: 1}
 		rFnInvoked := false
 
-		rFn := func(state, action interface{}) interface{} {
+		rFn := func(state testState, action string) testState {
 			rFnInvoked = true
-			ts := state.(testState)
-			ts.Value = 1
-			return ts
+			state.Value = 1
+			return state
 		}
 
 		lFnInvoked := false
@@ -64,15 +63,14 @@ func TestReduceStore(t *testing.T) {
 		})
 	})
 	t.Run("OverwriteAreEqual", func(t *testing.T) {
-		d := flux.NewDispatcher()
+		d := flux.NewDispatcher[string]()
 		is := testState{}
 		rFnInvoked := false
 
-		rFn := func(state, action interface{}) interface{} {
+		rFn := func(state testState, action string) testState {
 			rFnInvoked = true
-			ts := state.(testState)
-			ts.Value = 1
-			return ts
+			state.Value = 1
+			return state
 		}
 
 		lFnInvoked := false
@@ -80,9 +78,11 @@ func TestReduceStore(t *testing.T) {
 			lFnInvoked = true
 		}
 
-		aeFn := flux.ReduceStoreOptionAreEqual(func(one, two interface{}) bool {
-			return true
-		})
+		aeFn := flux.ReduceStoreOptionAreEqual[testState, string](
+			func(one, two testState) bool {
+				return true
+			},
+		)
 		rs := flux.NewReduceStore(d, rFn, is, aeFn)
 
 		rs.AddListener(lFn)

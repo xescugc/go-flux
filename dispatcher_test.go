@@ -6,16 +6,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/xescugc/go-flux"
+	"github.com/xescugc/go-flux/v2"
 )
 
 func TestDispatcher(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		d := flux.NewDispatcher()
+		d := flux.NewDispatcher[string]()
 		var fnCalled bool
 		pl := "some action"
 
-		id := d.Register(func(payload interface{}) {
+		id := d.Register(func(payload string) {
 			fnCalled = true
 			assert.Equal(t, pl, payload)
 			assert.True(t, d.IsDispatching())
@@ -50,13 +50,13 @@ func TestDispatcher(t *testing.T) {
 
 	t.Run("RegisteringAndUnregisteringMultipleFunctions", func(t *testing.T) {
 		calls := make([]int, 0, 0)
-		cbFn := func(n int) flux.CallbackFn {
-			return func(payload interface{}) {
+		cbFn := func(n int) flux.CallbackFn[string] {
+			return func(payload string) {
 				calls = append(calls, n)
 			}
 		}
 
-		d := flux.NewDispatcher()
+		d := flux.NewDispatcher[string]()
 		d.Register(cbFn(1))
 		id2 := d.Register(cbFn(2))
 		d.Register(cbFn(3))
@@ -77,7 +77,7 @@ func TestDispatcher(t *testing.T) {
 
 func TestWaitFor(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		d := flux.NewDispatcher()
+		d := flux.NewDispatcher[string]()
 
 		results := []string{}
 		eresults := []string{"3", "2", "1"}
@@ -87,19 +87,19 @@ func TestWaitFor(t *testing.T) {
 		// is sequential and the ids have an order,
 		// if not we would need to use the result of
 		// the d.Register
-		d.Register(func(payload interface{}) {
+		d.Register(func(payload string) {
 			err := d.WaitFor("2", "3")
 			require.NoError(t, err)
 
 			results = append(results, "1")
 		})
-		d.Register(func(payload interface{}) {
+		d.Register(func(payload string) {
 			err := d.WaitFor("3")
 			require.NoError(t, err)
 
 			results = append(results, "2")
 		})
-		d.Register(func(payload interface{}) {
+		d.Register(func(payload string) {
 			results = append(results, "3")
 		})
 
@@ -109,7 +109,7 @@ func TestWaitFor(t *testing.T) {
 		assert.Equal(t, eresults, results)
 	})
 	t.Run("ErrWaitForCircularDependency", func(t *testing.T) {
-		d := flux.NewDispatcher()
+		d := flux.NewDispatcher[string]()
 
 		var wferr1, wferr2 error
 		// The ids used on this examples are deduced
@@ -117,10 +117,10 @@ func TestWaitFor(t *testing.T) {
 		// is sequential and the ids have an order,
 		// if not we would need to use the result of
 		// the d.Register
-		d.Register(func(payload interface{}) {
+		d.Register(func(payload string) {
 			wferr1 = d.WaitFor("2")
 		})
-		d.Register(func(payload interface{}) {
+		d.Register(func(payload string) {
 			wferr2 = d.WaitFor("1")
 		})
 
@@ -137,16 +137,16 @@ func TestWaitFor(t *testing.T) {
 		}
 	})
 	t.Run("ErrWaitForDispatching", func(t *testing.T) {
-		d := flux.NewDispatcher()
+		d := flux.NewDispatcher[string]()
 
 		err := d.WaitFor()
 		assert.EqualError(t, err, flux.ErrWaitForDispatching.Error())
 	})
-	t.Run("ErrWaitForCircularDependency", func(t *testing.T) {
-		d := flux.NewDispatcher()
+	t.Run("ErrWaitForCircularDependency", func(t *testing.T) {
+		d := flux.NewDispatcher[string]()
 
 		var wferr error
-		d.Register(func(payload interface{}) {
+		d.Register(func(payload string) {
 			wferr = d.WaitFor("2")
 		})
 

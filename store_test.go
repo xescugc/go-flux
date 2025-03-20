@@ -5,15 +5,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/xescugc/go-flux"
+	"github.com/xescugc/go-flux/v2"
 )
 
 func TestStore(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		cbFnInvoked := false
-		d := flux.NewDispatcher()
-		var s *flux.Store
-		cbFn := func(p interface{}) {
+		d := flux.NewDispatcher[string]()
+		var s *flux.Store[string]
+		cbFn := func(p string) {
 			cbFnInvoked = true
 			err := s.EmitChange()
 			require.NoError(t, err)
@@ -43,9 +43,9 @@ func TestStore(t *testing.T) {
 	})
 	t.Run("SuccessWithListeners", func(t *testing.T) {
 		cbFnInvoked := false
-		d := flux.NewDispatcher()
-		var s *flux.Store
-		cbFn := func(p interface{}) {
+		d := flux.NewDispatcher[string]()
+		var s *flux.Store[string]
+		cbFn := func(p string) {
 			cbFnInvoked = true
 			err := s.EmitChange()
 			require.NoError(t, err)
@@ -91,9 +91,9 @@ func TestStore(t *testing.T) {
 	})
 	t.Run("SuccessWithNoChanges", func(t *testing.T) {
 		cbFnInvoked := false
-		d := flux.NewDispatcher()
-		var s *flux.Store
-		cbFn := func(p interface{}) {
+		d := flux.NewDispatcher[string]()
+		var s *flux.Store[string]
+		cbFn := func(p string) {
 			cbFnInvoked = true
 		}
 		lFnInvoked := false
