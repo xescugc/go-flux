@@ -12,8 +12,8 @@ var (
 )
 
 // Store represents the basic implementation of a FluxStore
-type Store struct {
-	dispatcher      *Dispatcher
+type Store[P any] struct {
+	dispatcher      *Dispatcher[P]
 	dispatcherToken string
 
 	muListeners sync.RWMutex
@@ -29,12 +29,12 @@ type Store struct {
 // dispatched payloads.
 // If the cbFn needs to trigger a change event it should call
 // EmitChange inside of it
-func NewStore(d *Dispatcher, cbFn CallbackFn) *Store {
-	s := &Store{
+func NewStore[P any](d *Dispatcher[P], cbFn CallbackFn[P]) *Store[P] {
+	s := &Store[P]{
 		dispatcher: d,
 		listeners:  make(map[string]func()),
 	}
-	s.dispatcherToken = d.Register(func(payload interface{}) {
+	s.dispatcherToken = d.Register(func(payload P) {
 		s.invokeCallbackFn(cbFn, payload)
 	})
 	return s
@@ -43,7 +43,7 @@ func NewStore(d *Dispatcher, cbFn CallbackFn) *Store {
 // AddListener will add a listener fn to the store, when the store
 // change the given fn will be called.
 // It returns a rmFn to remove the listener from the store
-func (s *Store) AddListener(fn func()) func() {
+func (s *Store[P]) AddListener(fn func()) func() {
 	s.muListeners.Lock()
 	defer s.muListeners.Unlock()
 
@@ -61,16 +61,16 @@ func (s *Store) AddListener(fn func()) func() {
 }
 
 // GetDispatcher returns the internal dispatcher
-func (s *Store) GetDispatcher() *Dispatcher { return s.dispatcher }
+func (s *Store[P]) GetDispatcher() *Dispatcher[P] { return s.dispatcher }
 
 // GetDispatcherToken returns the dispatcher token assigned
 // to this store
-func (s *Store) GetDispatcherToken() string { return s.dispatcherToken }
+func (s *Store[P]) GetDispatcherToken() string { return s.dispatcherToken }
 
 // HasChanged evaluates if the store has chnaged.
 // It can only be called during a dispatch if not
 // it returns ErrRequiresDispatching
-func (s *Store) HasChanged() (bool, error) {
+func (s *Store[P]) HasChanged() (bool, error) {
 	if !s.dispatcher.IsDispatching() {
 		return false, ErrRequiresDispatching
 	}
@@ -82,7 +82,7 @@ func (s *Store) HasChanged() (bool, error) {
 // notifications will be done at the end of the dispatch. It can only
 // be called during a dispatch if not
 // it returns ErrRequiresDispatching
-func (s *Store) EmitChange() error {
+func (s *Store[P]) EmitChange() error {
 	if !s.dispatcher.IsDispatching() {
 		return ErrRequiresDispatching
 	}
@@ -91,7 +91,7 @@ func (s *Store) EmitChange() error {
 	return nil
 }
 
-func (s *Store) invokeCallbackFn(cbFn CallbackFn, payload interface{}) {
+func (s *Store[P]) invokeCallbackFn(cbFn CallbackFn[P], payload P) {
 	s.changed = false
 	cbFn(payload)
 	if s.changed {

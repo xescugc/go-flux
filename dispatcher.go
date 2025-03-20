@@ -16,14 +16,14 @@ var (
 )
 
 // CallbackFn is the expected type of the callback functions
-type CallbackFn func(payload interface{})
+type CallbackFn[P any] func(payload P)
 
 // Dispatcher is used to broadcast payloads to registered callbacks.
-type Dispatcher struct {
+type Dispatcher[P any] struct {
 	muCallbacks sync.Mutex
 	// callbacks is a list of all
 	// the callbacks registered
-	callbacks map[string]CallbackFn
+	callbacks map[string]CallbackFn[P]
 
 	// isHandled keeps track of the callbacks
 	// that this already run
@@ -34,7 +34,7 @@ type Dispatcher struct {
 	isPending map[string]struct{}
 
 	// pendingPayload is the general payload sent
-	pendingPayload interface{}
+	pendingPayload P
 
 	lastID int
 
@@ -42,9 +42,9 @@ type Dispatcher struct {
 }
 
 // NewDispatcher returns a new Dispatcher implementation
-func NewDispatcher() *Dispatcher {
-	return &Dispatcher{
-		callbacks: make(map[string]CallbackFn),
+func NewDispatcher[P any]() *Dispatcher[P] {
+	return &Dispatcher[P]{
+		callbacks: make(map[string]CallbackFn[P]),
 		isHandled: make(map[string]struct{}),
 		isPending: make(map[string]struct{}),
 	}
@@ -54,7 +54,7 @@ func NewDispatcher() *Dispatcher {
 // executed when Dispatch is executed
 // The returned ID is the internal ID of that function and can be
 // used to WaitFor or Unregister a fn
-func (d *Dispatcher) Register(fn CallbackFn) string {
+func (d *Dispatcher[P]) Register(fn CallbackFn[P]) string {
 	d.muCallbacks.Lock()
 	defer d.muCallbacks.Unlock()
 
@@ -67,7 +67,7 @@ func (d *Dispatcher) Register(fn CallbackFn) string {
 // Unregister removes the internal cbFn that has
 // assigned id. If the id is not registered
 // it'll return ErrNotMatchingCallback
-func (d *Dispatcher) Unregister(id string) error {
+func (d *Dispatcher[P]) Unregister(id string) error {
 	d.muCallbacks.Lock()
 	defer d.muCallbacks.Unlock()
 
@@ -88,7 +88,7 @@ func (d *Dispatcher) Unregister(id string) error {
 // will be returned
 // If it's called while not Dispatching an ErrWaitForDispatching
 // will be returned
-func (d *Dispatcher) WaitFor(ids ...string) error {
+func (d *Dispatcher[P]) WaitFor(ids ...string) error {
 	if !d.dispatching.Load() {
 		return ErrWaitForDispatching
 	}
@@ -114,7 +114,7 @@ func (d *Dispatcher) WaitFor(ids ...string) error {
 // If we are already dispatching you'll enter in a deadlock
 // situation, so if you want to dispatch from inside a dispatch
 // do it in a goroutine
-func (d *Dispatcher) Dispatch(payload interface{}) error {
+func (d *Dispatcher[P]) Dispatch(payload P) error {
 	d.muCallbacks.Lock()
 	defer d.muCallbacks.Unlock()
 
@@ -132,22 +132,21 @@ func (d *Dispatcher) Dispatch(payload interface{}) error {
 }
 
 // IsDispatching checks if the Dispatcher is doing any work
-func (d *Dispatcher) IsDispatching() bool { return d.dispatching.Load() }
+func (d *Dispatcher[P]) IsDispatching() bool { return d.dispatching.Load() }
 
-func (d *Dispatcher) invokeCallback(id string) {
+func (d *Dispatcher[P]) invokeCallback(id string) {
 	d.isPending[id] = struct{}{}
 	d.callbacks[id](d.pendingPayload)
 	d.isHandled[id] = struct{}{}
 }
 
-func (d *Dispatcher) startDispatching(payload interface{}) {
+func (d *Dispatcher[P]) startDispatching(payload P) {
 	d.dispatching.Store(true)
 	d.isHandled = make(map[string]struct{})
 	d.isPending = make(map[string]struct{})
 	d.pendingPayload = payload
 }
 
-func (d *Dispatcher) stopDispatching() {
+func (d *Dispatcher[P]) stopDispatching() {
 	d.dispatching.Store(false)
-	d.pendingPayload = nil
 }
